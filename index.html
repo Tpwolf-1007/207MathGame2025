@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>207班數學大挑戰</title>
+    <title>207班數學大挑戰 - 迎向2026</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
-        :root { --red: #e21b3c; --blue: #1368ce; --yellow: #d89e00; --green: #26890c; }
+        :root { --red: #e21b3c; --blue: #1368ce; --yellow: #d89e00; --green: #26890c; --purple: #46178f; }
         body { font-family: '微軟正黑體', sans-serif; background-color: #f0f2f5; margin: 0; display: flex; justify-content: center; }
         
         /* 封面樣式 */
@@ -22,7 +22,7 @@
         #start-btn:hover { transform: scale(1.1); background: #2ea40e; }
 
         /* 遊戲主介面 */
-        #game-container { display: none; width: 95%; max-width: 900px; margin: 30px auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        #game-container { display: none; width: 95%; max-width: 900px; margin: 30px auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; }
         .header { display: flex; justify-content: space-between; align-items: center; font-size: 1.2em; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
         #timer { font-size: 2.2em; font-weight: bold; color: white; background: var(--red); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         
@@ -41,7 +41,7 @@
         #feedback { margin-top: 25px; font-size: 1.8em; font-weight: bold; text-align: center; min-height: 40px; }
         .correct { color: var(--green); }
         .wrong { color: var(--red); }
-        #next-btn { display: none; margin: 30px auto; padding: 15px 50px; font-size: 1.3em; background: #333; color: white; border: none; border-radius: 10px; cursor: pointer; }
+        #next-btn { display: none; margin: 30px auto; padding: 15px 50px; font-size: 1.3em; background: var(--purple); color: white; border: none; border-radius: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -66,8 +66,37 @@
 </div>
 
 <script>
+    // 音效產生器 (Web Audio API)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        if (type === 'correct') {
+            // 答對音效：高音叮
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+            oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        } else {
+            // 答錯音效：低音咚
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(110, audioCtx.currentTime); // A2
+            oscillator.frequency.exponentialRampToValueAtTime(55, audioCtx.currentTime + 0.2);
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        }
+    }
+
     const questions = [
-        // 混合趣味題與數學題
         { q: "下列何者同時具有大小與方向？", o: ["溫度", "身高", "向量", "體重"], a: 2 },
         { q: "已知 \\(A(1, 2)\\)，\\(\\vec{AB} = (-3, 4)\\)，求 \\(B\\) 點坐標。", o: ["\\((-2, 6)\\)", "\\((4, -2)\\)", "\\((-4, 2)\\)", "\\((2, -6)\\)"], a: 0 },
         { q: "向量 \\(\\vec{a} = (3, -4)\\)，其長度 \\(|\\vec{a}|\\) 為何？", o: ["1", "5", "7", "25"], a: 1 },
@@ -108,6 +137,7 @@
         { q: "若 \\(\\vec{a} \\cdot \\vec{b} < 0\\)，則兩向量夾角為？", o: ["銳角", "直角", "鈍角", "不存在"], a: 2 },
         { q: "半圓的圓周角為直角，可由何種向量性質證明？", o: ["加法", "內積等於 0", "平行", "係數積"], a: 1 },
         { q: "下列哪個不是2026年你該在數學課做事？", o: ["認真聽阿瑋上課", "每天回家都寫數學題目", "無聊的時候先睡一下", "熱情的回應阿瑋問題"], a: 2 }
+
     ];
 
     let currentIdx = 0;
@@ -116,6 +146,7 @@
     let timerId = null;
 
     function startGame() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         document.getElementById('cover-page').style.display = 'none';
         document.getElementById('game-container').style.display = 'block';
         loadQuestion();
@@ -125,6 +156,7 @@
         clearInterval(timerId);
         timeLeft = 30;
         document.getElementById("timer").innerText = timeLeft;
+        document.getElementById("timer").style.background = "var(--red)";
         document.getElementById("next-btn").style.display = "none";
         document.getElementById("feedback").innerText = "";
         
@@ -152,6 +184,7 @@
         timerId = setInterval(() => {
             timeLeft--;
             document.getElementById("timer").innerText = timeLeft;
+            if (timeLeft <= 5) document.getElementById("timer").style.background = "orange";
             if (timeLeft <= 0) {
                 clearInterval(timerId);
                 checkAnswer(-1); 
@@ -168,10 +201,12 @@
         for (let btn of btns) btn.disabled = true;
 
         if (selectedIdx === correctIdx) {
+            playSound('correct');
             feedback.innerHTML = "🎉 正確！太帥了阿瑋！";
             feedback.className = "correct";
-            score += (100 + timeLeft * 10); // 剩餘時間愈多，分數愈高
+            score += (100 + timeLeft * 10);
         } else {
+            playSound('wrong');
             feedback.innerHTML = `💀 答錯了！正解是 (${["A","B","C","D"][correctIdx]})`;
             feedback.className = "wrong";
         }
@@ -188,9 +223,9 @@
             document.getElementById("game-container").innerHTML = `
                 <div style="text-align:center; padding:50px;">
                     <h1>挑戰完成！🏆</h1>
-                    <p style="font-size:2em;">你的最終分數是：${score}</p>
-                    <p style="font-size:1.5em;">2026年也要認真寫數學作業喔！</p>
-                    <button onclick="location.reload()" style="padding:15px 30px; font-size:1.2em;">重新開始</button>
+                    <p style="font-size:2.2em; color:var(--purple);">你的最終分數：${score}</p>
+                    <p style="font-size:1.5em;">2026年，期待看到更認真的你！加油！</p>
+                    <button onclick="location.reload()" style="padding:15px 40px; font-size:1.3em; background:var(--green); color:white; border:none; border-radius:10px; cursor:pointer;">重新挑戰</button>
                 </div>
             `;
         }
