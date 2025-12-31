@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>207班數學大挑戰</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root { --red: #e21b3c; --blue: #1368ce; --yellow: #d89e00; --green: #26890c; }
+        body { font-family: '微軟正黑體', sans-serif; background-color: #f0f2f5; margin: 0; display: flex; justify-content: center; }
+        
+        /* 封面樣式 */
+        #cover-page {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('cover.png') no-repeat center center;
+            background-size: cover; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: white; text-align: center; z-index: 100;
+        }
+        #cover-page h1 { font-size: 3.5em; text-shadow: 3px 3px 15px rgba(0,0,0,0.8); padding: 20px; max-width: 80%; line-height: 1.3; }
+        #start-btn { padding: 25px 60px; font-size: 1.8em; background: var(--green); color: white; border: none; border-radius: 50px; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        #start-btn:hover { transform: scale(1.1); background: #2ea40e; }
+
+        /* 遊戲主介面 */
+        #game-container { display: none; width: 95%; max-width: 900px; margin: 30px auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; font-size: 1.2em; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        #timer { font-size: 2.2em; font-weight: bold; color: white; background: var(--red); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        
+        .question-text { font-size: 1.6em; font-weight: bold; margin-bottom: 30px; min-height: 80px; color: #333; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .option-btn { padding: 25px; font-size: 1.4em; border: none; border-radius: 12px; cursor: pointer; color: white; text-align: left; transition: 0.2s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); }
+        .option-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+        .option-btn:active { transform: translateY(2px); box-shadow: none; }
+        .option-btn:disabled { opacity: 0.6; cursor: default; }
+        
+        .opt-A { background-color: var(--red); }
+        .opt-B { background-color: var(--blue); }
+        .opt-C { background-color: var(--yellow); }
+        .opt-D { background-color: var(--green); }
+        
+        #feedback { margin-top: 25px; font-size: 1.8em; font-weight: bold; text-align: center; min-height: 40px; }
+        .correct { color: var(--green); }
+        .wrong { color: var(--red); }
+        #next-btn { display: none; margin: 30px auto; padding: 15px 50px; font-size: 1.3em; background: #333; color: white; border: none; border-radius: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="cover-page">
+    <h1>揮別 2025 在數學課睡覺的自己<br>迎向 2026 認真寫數學作業的我</h1>
+    <button id="start-btn" onclick="startGame()">點擊開始挑戰 🚀</button>
+</div>
+
+<div id="game-container">
+    <div class="header">
+        <div id="progress">題目: 1 / 40</div>
+        <div id="timer">30</div>
+        <div id="score">分數: 0</div>
+    </div>
+    
+    <div id="question" class="question-text">載入中...</div>
+    <div class="options-grid" id="options"></div>
+    
+    <div id="feedback"></div>
+    <center><button id="next-btn" onclick="nextQuestion()">下一題 Next →</button></center>
+</div>
+
+<script>
+    const questions = [
+        // 混合趣味題與數學題
+        { q: "下列何者同時具有大小與方向？", o: ["溫度", "身高", "向量", "體重"], a: 2 },
+        { q: "已知 \\(A(1, 2)\\)，\\(\\vec{AB} = (-3, 4)\\)，求 \\(B\\) 點坐標。", o: ["\\((-2, 6)\\)", "\\((4, -2)\\)", "\\((-4, 2)\\)", "\\((2, -6)\\)"], a: 0 },
+        { q: "向量 \\(\\vec{a} = (3, -4)\\)，其長度 \\(|\\vec{a}|\\) 為何？", o: ["1", "5", "7", "25"], a: 1 },
+        { q: "若 \\(\\vec{a} = (2, -1)\\)，\\(\\vec{b} = (1, 5)\\)，則 \\(\\vec{a} + \\vec{b} = ?\\)", o: ["\\((3, 4)\\)", "\\((1, -6)\\)", "\\((3, 6)\\)", "\\((1, 4)\\)"], a: 0 },
+        { q: "承上題，\\(\\vec{a} - \\vec{b} = ?\\)", o: ["\\((3, 4)\\)", "\\((1, -6)\\)", "\\((-1, 6)\\)", "\\((1, 4)\\)"], a: 1 },
+        { q: "這個學期中，數學課沒有出現在哪一節(不包含調課)？", o: ["第二節", "第三節", "第四節", "第五節"], a: 1 },
+        { q: "若正方形 \\(ABCD\\) 的邊長為 1，則 \\(\\vec{AB}\\) 與 \\(\\vec{BA}\\) 的關係為？", o: ["相等", "垂直", "互為反向量", "沒有關係"], a: 2 },
+        { q: "已知 \\(A(3, 4)\\)，\\(B(-1, 7)\\)，則向量 \\(\\vec{AB}\\) 為何？", o: ["\\((2, 11)\\)", "\\((-4, 3)\\)", "\\((4, -3)\\)", "\\((-2, -11)\\)"], a: 1 },
+        { q: "若 \\(\\vec{a} = (2, -3)\\)，則 \\(3\\vec{a} = ?\\)", o: ["\\((5, 0)\\)", "\\((6, -3)\\)", "\\((6, -9)\\)", "\\((-6, 9)\\)"], a: 2 },
+        { q: "下列哪一個向量是零向量？", o: ["\\((0, 1)\\)", "\\((1, 0)\\)", "\\((0, 0)\\)", "\\((1, 1)\\)"], a: 2 },
+        { q: "在 \\(\\triangle ABC\\) 中，\\(\\vec{AB} + \\vec{BC} = ?\\)", o: ["\\(\\vec{AC}\\)", "\\(\\vec{CA}\\)", "\\(\\vec{0}\\)", "\\(2\\vec{AB}\\)"], a: 0 },
+        { q: "若 \\(\\vec{a} = (-1, 1), \\vec{b} = (2, -1)\\)，求 \\(2\\vec{a} - \\vec{b}\\)。", o: ["\\((0, 1)\\)", "\\((-4, 3)\\)", "\\((4, -3)\\)", "\\((0, 3)\\)"], a: 1 },
+        { q: "在207班的所有任課老師中，女老師比男老師多幾位？", o: ["1位", "2位", "3位", "4位"], a: 3 },
+        { q: "若 \\(\\vec{a} = (1, 2)\\) 與 \\(\\vec{b} = (x, 6)\\) 平行，則 \\(x = ?\\)", o: ["2", "3", "4", "6"], a: 1 },
+        { q: "若 \\(A(1, 1), B(2, -4), C(x, -9)\\) 三點共線，則 \\(x = ?\\)", o: ["3", "4", "5", "0"], a: 0 },
+        { q: "在 \\(\\triangle ABC\\) 中，\\(D, E\\) 分別為中點，則 \\(\\vec{DE} = ?\\)", o: ["\\(\\vec{BC}\\)", "\\(2\\vec{BC}\\)", "\\(\\frac{1}{2}\\vec{BC}\\)", "\\(-\\vec{BC}\\)"], a: 2 },
+        { q: "若兩向量方向相同，則其夾角為？", o: ["\\(0^\\circ\\)", "\\(90^\\circ\\)", "\\(180^\\circ\\)", "\\(360^\\circ\\)"], a: 0 },
+        { q: "若兩向量方向相反，則其夾角為？", o: ["\\(0^\\circ\\)", "\\(90^\\circ\\)", "\\(180^\\circ\\)", "\\(270^\\circ\\)"], a: 2 },
+        { q: "若 \\(\\vec{a} = (3, 2), \\vec{b} = (2, t)\\) 且平行，則 \\(t = ?\\)", o: ["1.5", "1.33", "0.66", "0.75"], a: 1 },
+        { q: "在207班的同學裡，姓氏最多的姓是哪個？", o: ["林", "李", "黃", "賴"], a: 1 },
+        { q: "分點公式：若 \\(\\vec{AP} = \\frac{2}{5}\\vec{AB}\\)，則 \\(\\vec{OP} = ?\\)", o: ["\\(\\frac{3}{5}\\vec{OA} + \\frac{2}{5}\\vec{OB}\\)", "\\(\\frac{2}{5}\\vec{OA} + \\frac{3}{5}\\vec{OB}\\)", "\\(\\frac{1}{2}\\vec{OA} + \\frac{1}{2}\\vec{OB}\\)", "\\(\\vec{OA} + \\vec{OB}\\)"], a: 0 },
+        { q: "已知 \\(\\vec{a} = (1, 1), \\vec{b} = (2, -1)\\)，則 \\(3\\vec{a} + \\vec{b} = ?\\)", o: ["\\((5, 2)\\)", "\\((3, 0)\\)", "\\((5, 3)\\)", "\\((1, 2)\\)"], a: 0 },
+        { q: "若 \\(M\\) 為 \\(\\overline{AB}\\) 中點，則 \\(\\vec{OM} = ?\\)", o: ["\\(\\vec{OA} + \\vec{OB}\\)", "\\(\\frac{1}{2}(\\vec{OA} + \\vec{OB})\\)", "\\(\\vec{OA} - \\vec{OB}\\)", "\\(2(\\vec{OA} + \\vec{OB})\\)"], a: 1 },
+        { q: "向量內積 \\(\\vec{a} \\cdot \\vec{b}\\) 的結果為何？", o: ["一個向量", "一個純量(實數)", "一個角度", "不一定"], a: 1 },
+        { q: "若 \\(|\\vec{a}|=2, |\\vec{b}|=3\\)，夾角 \\(120^\\circ\\)，則 \\(\\vec{a} \\cdot \\vec{b} = ?\\)", o: ["3", "-3", "\\(3\\sqrt{3}\\)", "6"], a: 1 },
+        { q: "若 \\(\\vec{a} = (7, 1), \\vec{b} = (3, 4)\\)，則 \\(\\vec{a} \\cdot \\vec{b} = ?\\)", o: ["25", "10", "21", "31"], a: 0 },
+        { q: "承上題，\\(\\vec{a}\\) 與 \\(\\vec{b}\\) 的夾角為何？", o: ["\\(30^\\circ\\)", "\\(45^\\circ\\)", "\\(60^\\circ\\)", "\\(90^\\circ\\)"], a: 1 },
+        { q: "若非零向量 \\(\\vec{a} \\perp \\vec{b}\\)，則其內積為？", o: ["1", "-1", "0", "無解"], a: 2 },
+        { q: "已知 \\(\\vec{a} = (1, -3), \\vec{c} = (3, s)\\)，若垂直則 \\(s = ?\\)", o: ["1", "-1", "9", "-9"], a: 0 },
+        { q: "正三角形 \\(ABC\\) 邊長為 2，則 \\(\\vec{AB} \\cdot \\vec{AC} = ?\\)", o: ["2", "4", "1", "0"], a: 0 },
+        { q: "下列哪個不是207班數學老師的稱呼？", o: ["訓育組長", "中和魔法師", "EXCEL小王子", "中和金城武"], a: 3 },
+        { q: "若 \\(\\vec{a} = (3, 1), \\vec{b} = (1, 2)\\) 且 \\((\\vec{a}-t\\vec{b}) \\perp \\vec{b}\\)，則 \\(t = ?\\)", o: ["1", "2", "3", "5"], a: 0 },
+        { q: "若 \\(|\\vec{a}|=1, |\\vec{b}|=2\\)，夾角 \\(60^\\circ\\)，則 \\(|\\vec{a}+2\\vec{b}| = ?\\)", o: ["\\(\\sqrt{21}\\)", "5", "3", "\\(\\sqrt{17}\\)"], a: 0 },
+        { q: "正五邊形 \\(ABCDE\\) 中，下列何者內積為正？", o: ["\\(\\vec{AB} \\cdot \\vec{AB}\\)", "\\(\\vec{AB} \\cdot \\vec{AE}\\)", "\\(\\vec{AB} \\cdot \\vec{BC}\\)", "以上皆是"], a: 0 },
+        { q: "向量 \\(\\vec{a}, \\vec{b}\\) 決定的平行四邊形面積為？", o: ["\\(\\vec{a} \\cdot \\vec{b}\\)", "\\(|a_1b_2 - a_2b_1|\\)", "\\(|\\vec{a}|+|\\vec{b}|\\)", "\\(a_1a_2 - b_1b_2\\)"], a: 1 },
+        { q: "已知 \\(\\vec{a} = (1, 1), \\vec{b} = (5, 3)\\)，其平行四邊形面積為何？", o: ["8", "2", "4", "15"], a: 1 },
+        { q: "若 \\(\\vec{a} = (2, 3)\\)，在 \\(x\\) 軸上的正射影長度為？", o: ["2", "3", "5", "0"], a: 0 },
+        { q: "若 \\(\\vec{a} \\cdot \\vec{b} < 0\\)，則兩向量夾角為？", o: ["銳角", "直角", "鈍角", "不存在"], a: 2 },
+        { q: "半圓的圓周角為直角，可由何種向量性質證明？", o: ["加法", "內積等於 0", "平行", "係數積"], a: 1 },
+        { q: "下列哪個不是2026年你該在數學課做事？", o: ["認真聽阿瑋上課", "每天回家都寫數學題目", "無聊的時候先睡一下", "熱情的回應阿瑋問題"], a: 2 }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let timeLeft = 30;
+    let timerId = null;
+
+    function startGame() {
+        document.getElementById('cover-page').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        clearInterval(timerId);
+        timeLeft = 30;
+        document.getElementById("timer").innerText = timeLeft;
+        document.getElementById("next-btn").style.display = "none";
+        document.getElementById("feedback").innerText = "";
+        
+        const q = questions[currentIdx];
+        document.getElementById("progress").innerText = `題目: ${currentIdx + 1} / ${questions.length}`;
+        document.getElementById("question").innerText = q.q;
+        
+        const optionsDiv = document.getElementById("options");
+        optionsDiv.innerHTML = "";
+        const labels = ["A", "B", "C", "D"];
+        
+        q.o.forEach((opt, i) => {
+            const btn = document.createElement("button");
+            btn.className = `option-btn opt-${labels[i]}`;
+            btn.innerHTML = `<strong>${labels[i]}.</strong> ${opt}`;
+            btn.onclick = () => checkAnswer(i);
+            optionsDiv.appendChild(btn);
+        });
+
+        MathJax.typeset();
+        startTimer();
+    }
+
+    function startTimer() {
+        timerId = setInterval(() => {
+            timeLeft--;
+            document.getElementById("timer").innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timerId);
+                checkAnswer(-1); 
+            }
+        }, 1000);
+    }
+
+    function checkAnswer(selectedIdx) {
+        clearInterval(timerId);
+        const correctIdx = questions[currentIdx].a;
+        const feedback = document.getElementById("feedback");
+        const btns = document.getElementsByClassName("option-btn");
+        
+        for (let btn of btns) btn.disabled = true;
+
+        if (selectedIdx === correctIdx) {
+            feedback.innerHTML = "🎉 正確！太帥了阿瑋！";
+            feedback.className = "correct";
+            score += (100 + timeLeft * 10); // 剩餘時間愈多，分數愈高
+        } else {
+            feedback.innerHTML = `💀 答錯了！正解是 (${["A","B","C","D"][correctIdx]})`;
+            feedback.className = "wrong";
+        }
+        
+        document.getElementById("score").innerText = `分數: ${score}`;
+        document.getElementById("next-btn").style.display = "block";
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            loadQuestion();
+        } else {
+            document.getElementById("game-container").innerHTML = `
+                <div style="text-align:center; padding:50px;">
+                    <h1>挑戰完成！🏆</h1>
+                    <p style="font-size:2em;">你的最終分數是：${score}</p>
+                    <p style="font-size:1.5em;">2026年也要認真寫數學作業喔！</p>
+                    <button onclick="location.reload()" style="padding:15px 30px; font-size:1.2em;">重新開始</button>
+                </div>
+            `;
+        }
+    }
+</script>
+</body>
+</html>
